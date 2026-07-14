@@ -18,6 +18,6 @@ The user is resuming a conversation that Baton captured in another tool, account
    - To choose a specific conversation instead of the latest, first run it with `--arg list` to see the options, then re-run with `--arg <number>`.
    - If it prints that no conversation was found, tell the user and suggest `--arg list`.
 
-2. Treat the command's **complete stdout as the EXACT prior conversation you are continuing.** Read all of it.
+2. Treat the command's **complete stdout as the EXACT prior conversation you are continuing.** Read all of it, and follow the guidance printed at the top of that output.
 
-3. Continue seamlessly: do **not** greet, re-introduce yourself, or re-ask anything already covered. Treat the prior assistant turns as your own work, and pick up exactly where the conversation left off.
+3. For your **first reply** after loading: give only a short, one-line confirmation that you are caught up (name the topic so the user knows the right conversation loaded), then wait for the user. Do **not** greet, re-introduce yourself, summarize the conversation, or repeat/re-suggest any install / setup / restart / next-step instructions that appear in the transcript — those already happened. Treat the prior assistant turns as your own work and continue from where it left off once the user responds.

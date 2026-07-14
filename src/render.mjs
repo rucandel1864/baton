@@ -15,9 +15,11 @@ export function renderConversation(conv, { maxTokens, redact }) {
   if (compacted) L.push('');
   if (compacted) L.push('> _Older turns were compacted to fit this model\'s context window; the most recent turns are verbatim._');
   L.push('');
-  L.push(
-    'You are picking up **this exact conversation**. Read it fully and continue seamlessly — do not greet, re-introduce, or re-ask anything already covered below. Treat prior assistant turns as your own.',
-  );
+  L.push('You are resuming **this exact conversation** — it already happened, and you are the same assistant continuing it. Read all of it, then follow these rules for your very next reply:');
+  L.push('');
+  L.push('1. Reply with only a short, one-line confirmation that you are caught up — mention the topic so the user knows the right conversation loaded (e.g. "Caught up on the Baton build — ready to continue."). Then stop and wait for the user.');
+  L.push('2. Do NOT summarize the conversation, and do NOT repeat or re-suggest any setup/install/restart/next-step instructions that appear in it — those already happened. Only surface such steps if the user explicitly asks.');
+  L.push('3. Do not greet, re-introduce yourself, or re-ask anything already covered. Treat the prior assistant turns as your own work and continue from where it left off.');
   L.push('');
   L.push('---');
 
