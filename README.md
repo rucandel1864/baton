@@ -1,4 +1,4 @@
-# Baton 🪃
+# Baton 
 
 **Hand off the *exact* conversation between AI coding tools — with one command.**
 
