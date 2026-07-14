@@ -99,7 +99,9 @@ export function upsertConversation({ id, source, sourcePath, meta = {}, messages
   }
   conv.messages = mode === 'replace' ? messages : conv.messages.concat(messages);
   if (newOffset != null) conv.watermark = newOffset;
-  if (meta.project) conv.project = meta.project;
+  // Project + title are first-seen-wins so they don't drift as a session's cwd
+  // moves between subdirectories mid-conversation.
+  if (meta.project && !conv.project) conv.project = meta.project;
   if (meta.model) conv.model = meta.model;
   if (meta.title && !conv.title) conv.title = meta.title;
   if (sourcePath) conv.sourcePath = sourcePath;

@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverCcRoots, codexHome } from './src/paths.mjs';
+import { discoverCcRoots, codexHome, batonDir } from './src/paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +59,17 @@ export async function main({ args = {}, roots, codexPromptsDir } = {}) {
     removed.push(promptPath);
   } catch {
     /* not present */
+  }
+
+  // Remove the staged engine copy (but keep conversations).
+  if (!args['keep-engine']) {
+    const engine = path.join(batonDir(), 'engine');
+    try {
+      fs.rmSync(engine, { recursive: true, force: true });
+      if (!fs.existsSync(engine)) removed.push(engine);
+    } catch {
+      /* not present */
+    }
   }
 
   const msg = removed.length

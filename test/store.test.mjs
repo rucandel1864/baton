@@ -64,3 +64,9 @@ test('index is sorted newest-first and contains both conversations', () => {
   assert.equal(idx.length, 2);
   assert.ok(idx.every((e) => e.id && e.project === '/home/u/proj'));
 });
+
+test('project is first-seen and does not drift when cwd changes mid-session', () => {
+  upsertConversation({ id: 'cc:D', source: 'claude-code', meta: { project: '/proj/root', title: 'drift' }, messages: [{ role: 'user', parts: [{ t: 'text', text: 'a' }] }], mode: 'append' });
+  upsertConversation({ id: 'cc:D', source: 'claude-code', meta: { project: '/proj/root/sub' }, messages: [{ role: 'user', parts: [{ t: 'text', text: 'b' }] }], mode: 'append' });
+  assert.equal(readConversation('cc:D').project, '/proj/root'); // not overwritten by /proj/root/sub
+});

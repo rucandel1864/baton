@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeCwd, samePath, normPath } from '../src/paths.mjs';
+import path from 'node:path';
+import { sanitizeCwd, samePath, normPath, pathRelated } from '../src/paths.mjs';
 import { estimateTokens, compact } from '../src/tokens.mjs';
 import { redactSecrets } from '../src/redact.mjs';
 
@@ -15,6 +16,16 @@ test('samePath is case- and separator-insensitive on win32-style input', () => {
   // normPath resolves relative to cwd; feed already-absolute posix-ish paths.
   assert.ok(samePath('/home/u/proj', '/home/u/proj/'));
   assert.equal(normPath('/home/u/proj/'), normPath('/home/u/proj'));
+});
+
+test('pathRelated matches a project and its subdirectories, not siblings', () => {
+  const root = process.cwd();
+  const sub = path.join(root, 'baton');
+  const sibling = path.join(path.dirname(root), 'other-proj');
+  assert.ok(pathRelated(root, sub)); // parent <-> child
+  assert.ok(pathRelated(sub, root));
+  assert.ok(pathRelated(root, root));
+  assert.ok(!pathRelated(root, sibling));
 });
 
 test('estimateTokens ~ chars/4', () => {

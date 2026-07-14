@@ -39,6 +39,17 @@ export function samePath(a, b) {
   return normPath(a) === normPath(b);
 }
 
+// True if a and b are the same path OR one is inside the other. Lets a pickup
+// from a project subdirectory match a conversation rooted at the project (and
+// vice-versa), so cwd drift within one project still resolves.
+export function pathRelated(a, b) {
+  if (!a || !b) return false;
+  const na = normPath(a);
+  const nb = normPath(b);
+  if (na === nb) return true;
+  return na.startsWith(nb + path.sep) || nb.startsWith(na + path.sep);
+}
+
 // Discover Claude Code config dirs to install into / read from.
 // Looks at CLAUDE_CONFIG_DIR, ~/.claude, ~/.claude-b (dedup, existing only).
 export function discoverCcRoots() {

@@ -8,6 +8,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..');
 
+// Isolate the staged engine (~/.baton/engine) into a temp dir.
+process.env.BATON_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-install-store-'));
+
 const install = await import('../install.mjs');
 const uninstall = await import('../uninstall.mjs');
 
@@ -35,6 +38,11 @@ test('install wires Stop hook + /baton command + codex prompt', async () => {
   const prompt = fs.readFileSync(path.join(codexPromptsDir, 'baton.md'), 'utf8');
   assert.match(prompt, /render --project/);
   assert.ok(!prompt.includes('__BATON_BIN__'));
+
+  // Engine staged to a stable location, and the hook points at it.
+  const stagedBin = path.join(process.env.BATON_DIR, 'engine', 'bin', 'baton.mjs');
+  assert.ok(fs.existsSync(stagedBin), 'engine staged to ~/.baton/engine');
+  assert.ok(cmds.some((c) => c.includes('/engine/')), 'hook references the staged engine');
 });
 
 test('install is idempotent (no duplicate Stop hook)', async () => {

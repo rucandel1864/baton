@@ -1,7 +1,7 @@
 // Conversation selection over the merged store. Pure over the store; the CLI
 // calls refresh() first to pull in fresh Codex sessions.
 import { readIndex, readConversation } from './store.mjs';
-import { samePath } from './paths.mjs';
+import { pathRelated } from './paths.mjs';
 import { importRecentCodex } from './codex-import.mjs';
 
 // Pull recent Codex rollouts for this project into the store, then return index.
@@ -16,7 +16,7 @@ export function refresh(project) {
 
 export function list({ project } = {}) {
   let idx = readIndex();
-  if (project) idx = idx.filter((e) => samePath(e.project, project));
+  if (project) idx = idx.filter((e) => pathRelated(e.project, project));
   return idx.map((e, i) => ({
     n: i + 1,
     id: e.id,
