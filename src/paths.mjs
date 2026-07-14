@@ -15,6 +15,16 @@ export function codexHome() {
   return process.env.CODEX_HOME || path.join(home(), '.codex');
 }
 
+// OpenCode stores conversations in a SQLite DB under its data dir; custom
+// commands live under its config dir.
+export function opencodeDb() {
+  if (process.env.OPENCODE_DB) return process.env.OPENCODE_DB;
+  return path.join(home(), '.local', 'share', 'opencode', 'opencode.db');
+}
+export function opencodeConfigDir() {
+  return process.env.OPENCODE_CONFIG_DIR || path.join(home(), '.config', 'opencode');
+}
+
 // Claude Code encodes a project dir by replacing every non-alphanumeric char
 // with '-'. e.g. C:\Users\sneak\OneDrive\Desktop\investing
 //            ->  C--Users-sneak-OneDrive-Desktop-investing

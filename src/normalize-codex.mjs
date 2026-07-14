@@ -6,7 +6,7 @@
 // caller upserts with mode 'replace'.
 import { truncate, safeParse } from './util.mjs';
 
-const WRAPPER = /^<(environment_context|permissions instructions|user_instructions)/;
+const WRAPPER = /^(<(environment_context|permissions instructions|user_instructions)|# AGENTS\.md instructions)/;
 
 export function parseCodexRollout(buffer) {
   const text = (Buffer.isBuffer(buffer) ? buffer.toString('utf8') : String(buffer));

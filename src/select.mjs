@@ -3,13 +3,20 @@
 import { readIndex, readConversation } from './store.mjs';
 import { pathRelated } from './paths.mjs';
 import { importRecentCodex } from './codex-import.mjs';
+import { importRecentOpencode } from './opencode-import.mjs';
 
-// Pull recent Codex rollouts for this project into the store, then return index.
+// Pull recent Codex + OpenCode sessions for this project into the store, then
+// return the index. Each importer is isolated so one failing never breaks pickup.
 export function refresh(project) {
   try {
     importRecentCodex(project);
   } catch {
     /* never let a Codex scan break a pickup */
+  }
+  try {
+    importRecentOpencode(project);
+  } catch {
+    /* never let an OpenCode scan break a pickup */
   }
   return readIndex();
 }

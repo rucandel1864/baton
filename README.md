@@ -12,9 +12,9 @@ inside Claude Code, or the **Codex** app/CLI — you type `/baton` and the new m
 up the **full, verbatim conversation** and continues as if it had been there the whole
 time.
 
-It's **bidirectional**: Claude Code → Codex, Codex → Claude Code, account A → account B,
-and back. Whatever tool you land in, `/baton` pulls the latest conversation for that
-project regardless of which tool produced it.
+It's **bidirectional** across **Claude Code**, **Codex**, and **OpenCode**: hand off from any
+to any (and between Claude accounts). Whatever tool you land in, `/baton` pulls the latest
+conversation for that project regardless of which tool produced it.
 
 ---
 
@@ -63,7 +63,9 @@ This wires up, idempotently:
 - a **`/baton`** slash command in those same config dirs;
 - a **Baton skill** in `~/.codex/skills/baton/` — the mechanism the **Codex desktop app**
   supports (custom prompts are deprecated there);
-- a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex **CLI / IDE extension**.
+- a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex **CLI / IDE extension**;
+- a **`/baton`** custom command in `~/.config/opencode/command/` for **OpenCode** — with inline
+  shell injection, so it's seamless like Claude Code.
 
 Your existing `settings.json` is backed up to `settings.json.baton-bak` before the first
 change. Nothing leaves your machine. To remove everything (the store is left intact):
@@ -116,6 +118,8 @@ new session ─▶ /baton ─▶ `baton render` ─▶ full transcript as Markdo
   Code already persists transcripts to disk; Baton just mirrors the new lines.
 - **Codex** has no hook, so its `~/.codex/sessions/*.jsonl` rollouts are imported on
   demand when you run `/baton` (newest-first, project-matched, mtime-skipped).
+- **OpenCode** stores conversations in a SQLite DB (`opencode.db`); Baton reads it on demand
+  via Node's built-in `node:sqlite` (Node ≥ 22.5; older Node just skips OpenCode).
 - Everything normalizes to one tool-neutral format, so any endpoint can read any other's
   conversations.
 
@@ -152,7 +156,8 @@ prune `~/.baton/`.
 
 ## Scope & limitations (v1)
 
-- Supported: **Claude Code** and **Codex** (app + CLI).
+- Supported: **Claude Code**, **Codex** (app + CLI), and **OpenCode** (TUI / CLI;
+  `node:sqlite` reader needs Node ≥ 22.5).
 - Single machine (all endpoints share `~/.baton/`). No cross-machine sync yet.
 - The Claude Code transcript format is officially "internal and may change between
   versions." Baton's parser is deliberately tolerant (skips unknown lines, never

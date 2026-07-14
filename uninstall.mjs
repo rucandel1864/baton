@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverCcRoots, codexHome, batonDir } from './src/paths.mjs';
+import { discoverCcRoots, codexHome, opencodeConfigDir, batonDir } from './src/paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,7 +29,7 @@ function stripBatonStop(settings) {
   return changed;
 }
 
-export async function main({ args = {}, roots, codexPromptsDir, codexSkillsDir } = {}) {
+export async function main({ args = {}, roots, codexPromptsDir, codexSkillsDir, opencodeCommandDir } = {}) {
   const ccRoots = roots || discoverCcRoots();
   const removed = [];
 
@@ -65,6 +65,14 @@ export async function main({ args = {}, roots, codexPromptsDir, codexSkillsDir }
   try {
     fs.rmSync(skillDir, { recursive: true, force: true });
     if (!fs.existsSync(skillDir)) removed.push(skillDir);
+  } catch {
+    /* not present */
+  }
+
+  const ocPath = path.join(opencodeCommandDir || path.join(opencodeConfigDir(), 'command'), 'baton.md');
+  try {
+    fs.unlinkSync(ocPath);
+    removed.push(ocPath);
   } catch {
     /* not present */
   }

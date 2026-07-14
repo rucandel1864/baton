@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverCcRoots, codexHome, batonDir, normPath } from './src/paths.mjs';
+import { discoverCcRoots, codexHome, opencodeConfigDir, batonDir, normPath } from './src/paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STAGE_ITEMS = ['bin', 'src', 'commands', 'prompts', 'install.mjs', 'uninstall.mjs', 'package.json'];
@@ -40,17 +40,18 @@ function entryHasBaton(entry) {
   return Array.isArray(entry?.hooks) && entry.hooks.some((h) => typeof h?.command === 'string' && h.command.includes('baton.mjs'));
 }
 
-export async function main({ root = HERE, args = {}, roots, codexPromptsDir, codexSkillsDir, stage = true } = {}) {
+export async function main({ root = HERE, args = {}, roots, codexPromptsDir, codexSkillsDir, opencodeCommandDir, stage = true } = {}) {
   const dryRun = !!args['dry-run'];
   const engineRoot = stage && !dryRun ? stageEngine(root) : root;
   const binPath = fwd(path.join(engineRoot, 'bin', 'baton.mjs'));
   const hookCommand = `node "${binPath}" capture`;
   const ccRoots = roots || discoverCcRoots();
-  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, codexSkill: null, dryRun };
+  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, codexSkill: null, opencodeCommand: null, dryRun };
 
   const cmdTemplate = readTemplate(root, path.join('commands', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
   const promptTemplate = readTemplate(root, path.join('prompts', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
   const skillTemplate = readTemplate(root, path.join('codex-skill', 'SKILL.md')).replaceAll('__BATON_BIN__', binPath);
+  const ocCmdTemplate = readTemplate(root, path.join('opencode-command', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
 
   for (const ccRoot of ccRoots) {
     const settingsPath = path.join(ccRoot, 'settings.json');
@@ -99,6 +100,15 @@ export async function main({ root = HERE, args = {}, roots, codexPromptsDir, cod
   }
   summary.codexSkill = skillPath;
 
+  // OpenCode custom command (inline-shell injection — seamless like Claude Code).
+  const ocDir = opencodeCommandDir || path.join(opencodeConfigDir(), 'command');
+  const ocPath = path.join(ocDir, 'baton.md');
+  if (!dryRun) {
+    fs.mkdirSync(ocDir, { recursive: true });
+    fs.writeFileSync(ocPath, ocCmdTemplate);
+  }
+  summary.opencodeCommand = ocPath;
+
   printSummary(summary);
   return summary;
 }
@@ -115,10 +125,12 @@ function printSummary(s) {
   }
   lines.push(`  Codex skill (desktop app): ${s.codexSkill}`);
   lines.push(`  Codex prompt (CLI/IDE):    ${s.codexPrompt}`);
+  lines.push(`  OpenCode command:          ${s.opencodeCommand}`);
   lines.push('');
-  lines.push('Capture is automatic in Claude Code.');
+  lines.push('Capture is automatic in Claude Code (and pulled on demand from Codex + OpenCode).');
   lines.push('Pick up in a new session:');
   lines.push('  • Claude Code:        /baton');
+  lines.push('  • OpenCode:           /baton');
   lines.push('  • Codex desktop app:  say "load the baton handoff" (or /baton) — uses the skill');
   lines.push('  • Codex CLI:          /baton');
   lines.push('(Fully quit + reopen Codex once so it loads the new skill.)');
