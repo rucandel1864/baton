@@ -1,6 +1,6 @@
 // Conversation selection over the merged store. Pure over the store; the CLI
 // calls refresh() first to pull in fresh Codex sessions.
-import { readIndex, readConversation } from './store.mjs';
+import { readIndex, readConversation, backfillHuskFlags } from './store.mjs';
 import { pathRelated } from './paths.mjs';
 import { importRecentCodex } from './codex-import.mjs';
 import { importRecentOpencode } from './opencode-import.mjs';
@@ -24,11 +24,18 @@ export function refresh(project) {
   } catch {
     /* never let a Cursor scan break a pickup */
   }
+  try {
+    backfillHuskFlags();
+  } catch {
+    /* best-effort migration */
+  }
   return readIndex();
 }
 
 export function list({ project } = {}) {
-  let idx = readIndex();
+  // Pickup husks (sessions that are just Baton mechanics — see isPickupHusk)
+  // are hidden: they'd shadow the very conversation they were loaded from.
+  let idx = readIndex().filter((e) => !e.husk);
   if (project) idx = idx.filter((e) => pathRelated(e.project, project));
   return idx.map((e, i) => ({
     n: i + 1,

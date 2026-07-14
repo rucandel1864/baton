@@ -32,3 +32,37 @@ test('pick falls back to newest overall when project has no match', () => {
   const got = pick({ project: '/nonexistent' });
   assert.ok(got && (got.id === 'cc:A' || got.id === 'codex:B'));
 });
+
+// The feedback-loop bug: a session created BY a /baton pickup must not shadow
+// the conversation it was loaded from.
+test('a pickup-husk session is hidden from list/pick', () => {
+  upsertConversation({
+    id: 'cursor:HUSK',
+    source: 'cursor',
+    meta: { project: '/p1', title: 'baton' },
+    messages: [
+      { role: 'user', parts: [{ t: 'text', text: 'Run this in the terminal:\nnode "/x/baton.mjs" render --project .' }] },
+      { role: 'assistant', parts: [{ t: 'tool_use', name: 'run_terminal', input: { command: 'node /x/baton.mjs render' } }, { t: 'tool_result', name: '', text: '# ⟵ Continuing a prior conversation (via Baton)\n...the injected transcript...' }] },
+      { role: 'assistant', parts: [{ t: 'text', text: 'Caught up on the project — ready to continue.' }] },
+    ],
+    mode: 'replace',
+  });
+  // Despite being newest, the husk is invisible; the real conversation wins.
+  assert.equal(pick({ project: '/p1' }).id, 'cc:A');
+  assert.ok(!list({ project: '/p1' }).some((e) => e.id === 'cursor:HUSK'));
+});
+
+test('a husk becomes visible once real work continues in it', () => {
+  upsertConversation({
+    id: 'cursor:HUSK',
+    source: 'cursor',
+    meta: { project: '/p1' },
+    messages: [
+      { role: 'user', parts: [{ t: 'text', text: 'Great — now refactor the auth module like we discussed.' }] },
+      { role: 'assistant', parts: [{ t: 'text', text: 'Refactoring auth now. Here is the plan…' }] },
+      { role: 'user', parts: [{ t: 'text', text: 'Looks good, apply it.' }] },
+    ],
+    mode: 'append',
+  });
+  assert.equal(pick({ project: '/p1' }).id, 'cursor:HUSK'); // now the legit latest
+});

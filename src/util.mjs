@@ -41,6 +41,33 @@ export function safeParse(v) {
   return v;
 }
 
+// The heading baton render prints at the top of every injected transcript.
+// Its presence inside a captured message means that message is Baton pickup
+// mechanics, not real conversation.
+export const BATON_MARKER = 'Continuing a prior conversation (via Baton)';
+
+// True when a conversation is nothing but the mechanics of a Baton pickup:
+// the /baton command text, the injected transcript, and the "caught up" ack.
+// Without this filter a pickup session immediately becomes the project's
+// "most recent" conversation and the NEXT /baton loads the husk instead of
+// the real conversation it shadowed (a feedback loop). A husk stops being a
+// husk once the user actually continues working in it — then it's the
+// legitimate latest conversation.
+export function isPickupHusk(conv) {
+  let echo = 0;
+  let substance = 0;
+  for (const m of conv.messages || []) {
+    if (m.role === 'system') continue;
+    const isEcho = (m.parts || []).some((p) => {
+      const t = p.text != null ? p.text : p.t === 'tool_use' ? JSON.stringify(p.input || '') : '';
+      return t.includes(BATON_MARKER) || t.includes('baton.mjs');
+    });
+    if (isEcho) echo++;
+    else substance++;
+  }
+  return echo > 0 && substance < 3;
+}
+
 // Compact one-line preview of a tool-call input for rendering.
 export function previewInput(input, max = 200) {
   let s;

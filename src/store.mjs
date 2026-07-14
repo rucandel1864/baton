@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { batonDir } from './paths.mjs';
+import { isPickupHusk } from './util.mjs';
 
 const DEFAULT_CONFIG = { redact: true, maxTokens: 150000, includeThinking: false };
 
@@ -71,9 +72,27 @@ export function writeConversation(conv) {
     title: conv.title,
     updated: conv.updated,
     model: conv.model || '',
+    husk: isPickupHusk(conv),
     path: convPath(conv.id),
   });
   return conv;
+}
+
+// One-time migration: index entries written before the husk flag existed get
+// it computed lazily (a stale pickup husk would otherwise shadow the real
+// conversation forever, since unchanged sources are never re-imported).
+export function backfillHuskFlags() {
+  const idx = readIndex();
+  let changed = false;
+  for (const e of idx) {
+    if (e.husk === undefined) {
+      const conv = readConversation(e.id);
+      e.husk = conv ? isPickupHusk(conv) : false;
+      changed = true;
+    }
+  }
+  if (changed) writeJson(indexPath(), idx, true);
+  return changed;
 }
 
 // Merge a capture into the store.
