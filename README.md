@@ -152,7 +152,7 @@ prune `~/.baton/`.
 
 ## Scope & limitations (v1)
 
-- Supported: **Claude Code** (all accounts / GLM / LongCat) and **Codex** (app + CLI).
+- Supported: **Claude Code** and **Codex** (app + CLI).
 - Single machine (all endpoints share `~/.baton/`). No cross-machine sync yet.
 - The Claude Code transcript format is officially "internal and may change between
   versions." Baton's parser is deliberately tolerant (skips unknown lines, never
