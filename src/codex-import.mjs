@@ -17,7 +17,7 @@ function sortedDesc(dir) {
   }
 }
 
-function newestRolloutFiles(limit) {
+export function newestRolloutFiles(limit) {
   const out = [];
   const sess = path.join(codexHome(), 'sessions');
   for (const y of sortedDesc(sess)) {

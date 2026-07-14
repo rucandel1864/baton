@@ -100,6 +100,28 @@ async function main() {
       else process.stdout.write(formatList(items) + '\n');
       break;
     }
+    case 'to-codex': {
+      const { pick } = await import('../src/select.mjs');
+      const { exportToCodex } = await import('../src/export-codex.mjs');
+      const project = resolveProject(args);
+      const arg = typeof args.arg === 'string' ? args.arg.trim() : '';
+      const conv = pick({
+        project,
+        id: args.id && args.id !== true ? String(args.id) : undefined,
+        index: /^\d+$/.test(arg) ? parseInt(arg, 10) : undefined,
+      });
+      if (!conv) {
+        process.stdout.write(`Baton: no conversation found for ${project} to export.\n`);
+        break;
+      }
+      const r = exportToCodex(conv);
+      process.stdout.write(
+        `Wrote a resumable Codex session.\n` +
+          `  In the Codex app: open the sessions/resume list and pick  "${r.threadName}"\n` +
+          `  file: ${r.file}\n`,
+      );
+      break;
+    }
     case 'install': {
       const mod = await import('../install.mjs');
       await mod.main({ root: ROOT, args });
@@ -123,6 +145,7 @@ async function main() {
           '  baton capture [--file <transcript>]   Mirror a CC transcript (Stop hook uses stdin)',
           '  baton render  [--project <dir>] [--arg <list|N>] [--id <id>] [--max-tokens N] [--no-redact]',
           '  baton list    [--project <dir>|--all] [--json]',
+          '  baton to-codex [--project <dir>] [--arg N] [--id <id>]   Write a resumable native Codex session',
           '  baton install [--dry-run]             Wire hook + /baton into Claude Code & Codex',
           '  baton uninstall',
           '',
