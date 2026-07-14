@@ -1,0 +1,9 @@
+{"type":"attachment","attachment":{},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:00Z"}
+{"type":"mode","mode":"default","sessionId":"S1"}
+{"type":"file-history-snapshot","messageId":"x","snapshot":{}}
+{"type":"user","isMeta":true,"message":{"role":"user","content":"meta noise"},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:01Z"}
+{"type":"user","message":{"role":"user","content":"<command-name>/model</command-name>"},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:02Z"}
+{"type":"user","message":{"role":"user","content":"Help me build a parser"},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:03Z"}
+{"type":"assistant","message":{"role":"assistant","model":"claude-opus-4-8","content":[{"type":"thinking","thinking":"secret internal thoughts"},{"type":"text","text":"Sure, here is how."},{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls -la"}}]},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:04Z"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"file1\nfile2"}]},"cwd":"/home/u/proj","sessionId":"S1","timestamp":"2026-07-14T00:00:05Z"}
+{"type":"summary","summary":"noise"}

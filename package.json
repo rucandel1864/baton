@@ -1,0 +1,25 @@
+{
+  "name": "baton-context-bus",
+  "version": "0.1.0",
+  "description": "Portable conversation-context bus — hand off the exact conversation between Claude Code, Codex, and any account/model with one command.",
+  "type": "module",
+  "bin": {
+    "baton": "bin/baton.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "baton": "node bin/baton.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "files": [
+    "bin",
+    "src",
+    "commands",
+    "prompts",
+    "install.mjs",
+    "uninstall.mjs"
+  ]
+}

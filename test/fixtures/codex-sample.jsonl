@@ -1,0 +1,10 @@
+{"timestamp":"2026-07-14T00:00:00Z","type":"session_meta","payload":{"id":"CX1","parent_thread_id":null,"timestamp":"2026-07-14T00:00:00Z"}}
+{"timestamp":"2026-07-14T00:00:01Z","type":"turn_context","payload":{"turn_id":"tc1","cwd":"/home/u/proj","workspace_roots":["/home/u/proj"]}}
+{"timestamp":"2026-07-14T00:00:02Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"permissions stuff"}]}}
+{"timestamp":"2026-07-14T00:00:03Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n<cwd>/home/u/proj</cwd>\n</environment_context>"}]}}
+{"timestamp":"2026-07-14T00:00:04Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Review the diff for me"}]}}
+{"timestamp":"2026-07-14T00:00:05Z","type":"event_msg","payload":{"type":"user_message","message":"Review the diff for me"}}
+{"timestamp":"2026-07-14T00:00:06Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Looking now."}]}}
+{"timestamp":"2026-07-14T00:00:07Z","type":"response_item","payload":{"type":"custom_tool_call","status":"completed","call_id":"c1","name":"exec","input":"{\"command\":\"git diff\"}"}}
+{"timestamp":"2026-07-14T00:00:08Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"c1","output":[{"type":"input_text","text":"diff --git a b"}]}}
+{"timestamp":"2026-07-14T00:00:09Z","type":"response_item","payload":{"type":"reasoning","summary":[],"encrypted_content":"gAAAA_opaque"}}
