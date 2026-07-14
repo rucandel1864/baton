@@ -1,7 +1,7 @@
 # Using Baton with any tool
 
-Baton ships first-class integrations for **Claude Code**, **Codex**, and **OpenCode** —
-but the engine underneath is tool-agnostic. Everything is plain commands over a plain
+Baton ships first-class integrations for **Claude Code**, **Codex**, **Cursor**, and
+**OpenCode** — but the engine underneath is tool-agnostic. Everything is plain commands over a plain
 store, so wiring up *anything else* takes a minute.
 
 ## Pickup from any tool (no adapter needed)

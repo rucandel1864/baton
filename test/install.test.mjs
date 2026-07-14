@@ -18,6 +18,7 @@ const ccRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cc-'));
 const codexPromptsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cxp-'));
 const codexSkillsDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cxs-')), 'baton');
 const opencodeCommandDir = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-occ-'));
+const cursorCommandDir = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-curc-'));
 fs.writeFileSync(path.join(ccRoot, 'settings.json'), JSON.stringify({ model: 'fable' }, null, 2));
 
 function readSettings() {
@@ -25,7 +26,7 @@ function readSettings() {
 }
 
 test('install wires Stop hook + /baton command + codex prompt', async () => {
-  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, args: {} });
+  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, cursorCommandDir, args: {} });
   const s = readSettings();
   assert.ok(Array.isArray(s.hooks.Stop));
   const cmds = s.hooks.Stop.flatMap((e) => (e.hooks || []).map((h) => h.command));
@@ -53,6 +54,11 @@ test('install wires Stop hook + /baton command + codex prompt', async () => {
   assert.match(oc, /render --project/);
   assert.ok(!oc.includes('__BATON_BIN__'));
 
+  // Cursor custom command.
+  const cur = fs.readFileSync(path.join(cursorCommandDir, 'baton.md'), 'utf8');
+  assert.match(cur, /render --project/);
+  assert.ok(!cur.includes('__BATON_BIN__'));
+
   // Engine staged to a stable location, and the hook points at it.
   const stagedBin = path.join(process.env.BATON_DIR, 'engine', 'bin', 'baton.mjs');
   assert.ok(fs.existsSync(stagedBin), 'engine staged to ~/.baton/engine');
@@ -60,7 +66,7 @@ test('install wires Stop hook + /baton command + codex prompt', async () => {
 });
 
 test('install is idempotent (no duplicate Stop hook)', async () => {
-  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, args: {} });
+  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, cursorCommandDir, args: {} });
   const s = readSettings();
   const batonEntries = s.hooks.Stop.filter((e) => (e.hooks || []).some((h) => h.command.includes('baton.mjs')));
   assert.equal(batonEntries.length, 1);
@@ -69,14 +75,14 @@ test('install is idempotent (no duplicate Stop hook)', async () => {
 
 test('npm "files" whitelist ships every template install.mjs reads', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-  for (const needed of ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'install.mjs', 'uninstall.mjs']) {
+  for (const needed of ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'cursor-command', 'install.mjs', 'uninstall.mjs']) {
     assert.ok(pkg.files.includes(needed), `package.json files must include "${needed}" or npx install breaks`);
   }
 });
 
 test('re-install from the STAGED engine works (all templates staged)', async () => {
   const stagedRoot = path.join(process.env.BATON_DIR, 'engine');
-  for (const t of ['commands/baton.md', 'prompts/baton.md', 'codex-skill/SKILL.md', 'opencode-command/baton.md']) {
+  for (const t of ['commands/baton.md', 'prompts/baton.md', 'codex-skill/SKILL.md', 'opencode-command/baton.md', 'cursor-command/baton.md']) {
     assert.ok(fs.existsSync(path.join(stagedRoot, ...t.split('/'))), `staged engine missing template ${t}`);
   }
   // Running install with root = staged engine must not throw and must converge.
@@ -87,7 +93,7 @@ test('re-install from the STAGED engine works (all templates staged)', async () 
 });
 
 test('uninstall removes hook + command + prompt, leaves other settings', async () => {
-  await uninstall.main({ roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, args: {} });
+  await uninstall.main({ roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, cursorCommandDir, args: {} });
   const s = readSettings();
   const stop = s.hooks && s.hooks.Stop ? s.hooks.Stop : [];
   assert.ok(!stop.some((e) => (e.hooks || []).some((h) => h.command.includes('baton.mjs'))));
@@ -96,4 +102,5 @@ test('uninstall removes hook + command + prompt, leaves other settings', async (
   assert.ok(!fs.existsSync(path.join(codexPromptsDir, 'baton.md')));
   assert.ok(!fs.existsSync(path.join(codexSkillsDir, 'SKILL.md')));
   assert.ok(!fs.existsSync(path.join(opencodeCommandDir, 'baton.md')));
+  assert.ok(!fs.existsSync(path.join(cursorCommandDir, 'baton.md')));
 });

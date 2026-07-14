@@ -87,7 +87,7 @@ export function importRecentOpencode(project, { limit = 40 } = {}) {
 
   let db;
   try {
-    db = new sqlite.DatabaseSync(dbPath, { readonly: true });
+    db = new sqlite.DatabaseSync(dbPath, { readOnly: true });
   } catch {
     return { imported: 0, reason: 'open-failed' };
   }

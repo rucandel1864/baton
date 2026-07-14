@@ -5,10 +5,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { discoverCcRoots, codexHome, opencodeConfigDir, batonDir, normPath } from './src/paths.mjs';
+import { discoverCcRoots, codexHome, opencodeConfigDir, cursorCommandsDir, batonDir, normPath } from './src/paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const STAGE_ITEMS = ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'install.mjs', 'uninstall.mjs', 'package.json'];
+const STAGE_ITEMS = ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'cursor-command', 'install.mjs', 'uninstall.mjs', 'package.json'];
 
 function fwd(p) {
   return p.replace(/\\/g, '/');
@@ -40,18 +40,19 @@ function entryHasBaton(entry) {
   return Array.isArray(entry?.hooks) && entry.hooks.some((h) => typeof h?.command === 'string' && h.command.includes('baton.mjs'));
 }
 
-export async function main({ root = HERE, args = {}, roots, codexPromptsDir, codexSkillsDir, opencodeCommandDir, stage = true } = {}) {
+export async function main({ root = HERE, args = {}, roots, codexPromptsDir, codexSkillsDir, opencodeCommandDir, cursorCommandDir, stage = true } = {}) {
   const dryRun = !!args['dry-run'];
   const engineRoot = stage && !dryRun ? stageEngine(root) : root;
   const binPath = fwd(path.join(engineRoot, 'bin', 'baton.mjs'));
   const hookCommand = `node "${binPath}" capture`;
   const ccRoots = roots || discoverCcRoots();
-  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, codexSkill: null, opencodeCommand: null, dryRun };
+  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, codexSkill: null, opencodeCommand: null, cursorCommand: null, dryRun };
 
   const cmdTemplate = readTemplate(root, path.join('commands', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
   const promptTemplate = readTemplate(root, path.join('prompts', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
   const skillTemplate = readTemplate(root, path.join('codex-skill', 'SKILL.md')).replaceAll('__BATON_BIN__', binPath);
   const ocCmdTemplate = readTemplate(root, path.join('opencode-command', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
+  const cursorTemplate = readTemplate(root, path.join('cursor-command', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
 
   for (const ccRoot of ccRoots) {
     const settingsPath = path.join(ccRoot, 'settings.json');
@@ -109,6 +110,15 @@ export async function main({ root = HERE, args = {}, roots, codexPromptsDir, cod
   }
   summary.opencodeCommand = ocPath;
 
+  // Cursor custom command (~/.cursor/commands): /baton in Cursor's Agent chat.
+  const curDir = cursorCommandDir || cursorCommandsDir();
+  const curPath = path.join(curDir, 'baton.md');
+  if (!dryRun) {
+    fs.mkdirSync(curDir, { recursive: true });
+    fs.writeFileSync(curPath, cursorTemplate);
+  }
+  summary.cursorCommand = curPath;
+
   printSummary(summary);
   return summary;
 }
@@ -126,13 +136,16 @@ function printSummary(s) {
   lines.push(`  Codex skill (desktop app): ${s.codexSkill}`);
   lines.push(`  Codex prompt (CLI/IDE):    ${s.codexPrompt}`);
   lines.push(`  OpenCode command:          ${s.opencodeCommand}`);
+  lines.push(`  Cursor command:            ${s.cursorCommand}`);
   lines.push('');
-  lines.push('Capture is automatic in Claude Code (and pulled on demand from Codex + OpenCode).');
+  lines.push('Capture is automatic in Claude Code (and pulled on demand from Codex, OpenCode + Cursor).');
   lines.push('Pick up in a new session:');
   lines.push('  • Claude Code:        /baton');
   lines.push('  • OpenCode:           /baton');
+  lines.push('  • Cursor (Agent):     /baton');
   lines.push('  • Codex desktop app:  say "load the baton handoff" (or /baton) — uses the skill');
   lines.push('  • Codex CLI:          /baton');
+  lines.push('  • Anything else:      baton copy   (renders to your clipboard — paste anywhere)');
   lines.push('(Fully quit + reopen Codex once so it loads the new skill.)');
   process.stdout.write(lines.join('\n') + '\n');
 }

@@ -11,10 +11,10 @@ store. In **any** new session — a different tool, a different account, a diffe
 you type `/baton` and the new model picks up the **full, verbatim conversation** and
 continues as if it had been there the whole time.
 
-It's **bidirectional** across **Claude Code**, **Codex**, and **OpenCode** — hand off from
-any to any, including between multiple Claude Code accounts. And for everything else,
-`baton copy` puts the handoff on your clipboard, so **any** tool with a paste box (other
-CLIs, IDE agents, even web chats) can pick it up too.
+It's **bidirectional** across **Claude Code**, **Codex**, **Cursor**, and **OpenCode** —
+hand off from any to any, including between multiple Claude Code accounts. And for
+everything else, `baton copy` puts the handoff on your clipboard, so **any** tool with a
+paste box (other CLIs, IDE agents, even web chats) can pick it up too.
 
 ---
 
@@ -68,7 +68,8 @@ This wires up, idempotently:
   supports (custom prompts are deprecated there);
 - a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex **CLI / IDE extension**;
 - a **`/baton`** custom command in OpenCode's config dir — with inline shell injection,
-  so it's seamless like Claude Code.
+  so it's seamless like Claude Code;
+- a **`/baton`** command in `~/.cursor/commands/` for **Cursor**'s Agent chat.
 
 Your existing `settings.json` is backed up to `settings.json.baton-bak` before the first
 change. Nothing leaves your machine. To remove everything (the store is left intact):
@@ -95,9 +96,12 @@ conversation just say **"load the baton handoff"** (or "continue where we left o
 runs the Baton skill and continues from the prior conversation. In the Codex **CLI / IDE
 extension**, `/baton` works as a custom prompt.
 
+**In Cursor**, type `/baton` in a new Agent chat — the agent runs Baton in the terminal
+and picks up the conversation (approve the one command if prompted).
+
 ### The magic test
-1. Have a conversation in Claude Code.
-2. Open Codex (or OpenCode, or another Claude account). Type `/baton`.
+1. Have a conversation in Claude Code (or Cursor, or anywhere).
+2. Open Codex (or Cursor, OpenCode, another Claude account). Type `/baton`.
 3. It already knows everything. Keep going.
 
 ---
@@ -131,7 +135,8 @@ Claude Code turn ends ─▶ Stop hook ─▶ `baton capture`
                                  ~/.baton/  (canonical JSON, one file per convo)
                                           ▲
 Codex rollouts ────(scanned on demand)────┤
-OpenCode SQLite ───(scanned on demand)────┘
+OpenCode SQLite ───(scanned on demand)────┤
+Cursor SQLite ─────(scanned on demand)────┘
                                           │
 new session ─▶ /baton ─▶ `baton render` ─▶ full transcript as Markdown ─▶ injected
 ```
@@ -142,6 +147,8 @@ new session ─▶ /baton ─▶ `baton render` ─▶ full transcript as Markdo
   demand when you run `/baton` (newest-first, project-matched, mtime-skipped).
 - **OpenCode** stores conversations in a SQLite DB (`opencode.db`); Baton reads it on demand
   via Node's built-in `node:sqlite` (Node ≥ 22.5; older Node just skips OpenCode).
+- **Cursor** keeps every conversation in its global `state.vscdb` (SQLite); Baton reads it
+  the same way — on demand, read-only, project-matched via each chat's workspace folder.
 - Everything normalizes to one tool-neutral format, so any endpoint can read any other's
   conversations.
 
@@ -183,8 +190,9 @@ out of its code block.
 
 ## Scope & limitations (v1)
 
-- First-class: **Claude Code**, **Codex** (app + CLI), and **OpenCode** (`node:sqlite`
-  reader needs Node ≥ 22.5). Everything else: `baton copy` / [docs/ADAPTERS.md](docs/ADAPTERS.md).
+- First-class: **Claude Code**, **Codex** (app + CLI), **Cursor**, and **OpenCode**
+  (the SQLite readers need Node ≥ 22.5). Everything else: `baton copy` /
+  [docs/ADAPTERS.md](docs/ADAPTERS.md).
 - Single machine (all endpoints share `~/.baton/`). No cross-machine sync yet.
 - The Claude Code transcript format is officially "internal and may change between
   versions." Baton's parser is deliberately tolerant (skips unknown lines, never

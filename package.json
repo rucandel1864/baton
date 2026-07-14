@@ -21,6 +21,7 @@
     "prompts",
     "codex-skill",
     "opencode-command",
+    "cursor-command",
     "install.mjs",
     "uninstall.mjs"
   ]

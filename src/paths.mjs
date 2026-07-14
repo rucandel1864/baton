@@ -32,6 +32,20 @@ export function opencodeDb() {
   }
   return candidates[candidates.length - 1];
 }
+// Cursor keeps every conversation ("composer") in a global SQLite DB inside
+// its VS Code-style user-data dir; custom slash commands live in ~/.cursor.
+export function cursorGlobalDb() {
+  if (process.env.CURSOR_DB) return process.env.CURSOR_DB;
+  let base;
+  if (process.platform === 'win32') base = process.env.APPDATA || path.join(home(), 'AppData', 'Roaming');
+  else if (process.platform === 'darwin') base = path.join(home(), 'Library', 'Application Support');
+  else base = process.env.XDG_CONFIG_HOME || path.join(home(), '.config');
+  return path.join(base, 'Cursor', 'User', 'globalStorage', 'state.vscdb');
+}
+export function cursorCommandsDir() {
+  return process.env.CURSOR_COMMANDS_DIR || path.join(home(), '.cursor', 'commands');
+}
+
 export function opencodeConfigDir() {
   if (process.env.OPENCODE_CONFIG_DIR) return process.env.OPENCODE_CONFIG_DIR;
   if (process.env.XDG_CONFIG_HOME) return path.join(process.env.XDG_CONFIG_HOME, 'opencode');
