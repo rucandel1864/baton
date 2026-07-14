@@ -1,0 +1,6 @@
+# Keep source and fixtures LF so byte offsets and cross-platform installs are stable.
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.md    text eol=lf

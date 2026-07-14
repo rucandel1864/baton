@@ -66,7 +66,7 @@ export function parseCcTranscript(buffer, fromOffset = 0, opts = {}) {
     if (!meta.project && o.cwd) meta.project = o.cwd;
     if (!meta.sessionId && o.sessionId) meta.sessionId = o.sessionId;
     if (!meta.created && o.timestamp) meta.created = o.timestamp;
-    if (!meta.model && m.model) meta.model = m.model;
+    if (!meta.model && m.model && m.model !== '<synthetic>') meta.model = m.model;
     if (!meta.title && role === 'user') {
       const ft = parts.find((x) => x.t === 'text');
       if (ft) meta.title = ft.text.split('\n')[0].slice(0, 80).trim();
