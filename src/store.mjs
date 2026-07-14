@@ -73,21 +73,37 @@ export function writeConversation(conv) {
     updated: conv.updated,
     model: conv.model || '',
     husk: isPickupHusk(conv),
+    huskV: HUSK_RULE_VERSION,
+    hidden: !!conv.hidden,
     path: convPath(conv.id),
   });
   return conv;
 }
 
-// One-time migration: index entries written before the husk flag existed get
-// it computed lazily (a stale pickup husk would otherwise shadow the real
-// conversation forever, since unchanged sources are never re-imported).
+// Manually hide a conversation from list/pick (e.g. test noise). The flag
+// lives on the conversation itself, so it survives re-imports from the
+// source tool. Returns the conversation or null.
+export function setHidden(id, hidden = true) {
+  const conv = readConversation(id);
+  if (!conv) return null;
+  conv.hidden = !!hidden;
+  return writeConversation(conv);
+}
+
+// Bump when the isPickupHusk heuristic changes so stale flags are recomputed.
+const HUSK_RULE_VERSION = 2;
+
+// Lazy migration: index entries whose husk flag is missing or was computed by
+// an older rule get recomputed (a stale pickup husk would otherwise shadow the
+// real conversation forever, since unchanged sources are never re-imported).
 export function backfillHuskFlags() {
   const idx = readIndex();
   let changed = false;
   for (const e of idx) {
-    if (e.husk === undefined) {
+    if (e.husk === undefined || e.huskV !== HUSK_RULE_VERSION) {
       const conv = readConversation(e.id);
       e.husk = conv ? isPickupHusk(conv) : false;
+      e.huskV = HUSK_RULE_VERSION;
       changed = true;
     }
   }

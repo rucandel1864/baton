@@ -137,6 +137,35 @@ async function main() {
       else process.stdout.write(formatList(items) + '\n');
       break;
     }
+    case 'hide':
+    case 'unhide': {
+      // Hide (or restore) a conversation from list/pick — e.g. test noise.
+      // Requires an explicit target: an index from `baton list`, or --id.
+      const { list } = await import('../src/select.mjs');
+      const { setHidden } = await import('../src/store.mjs');
+      const hidden = cmd === 'hide';
+      const project = resolveProject(args);
+      let id = args.id && args.id !== true ? String(args.id) : undefined;
+      const nArg = args._[0] != null ? String(args._[0]) : typeof args.arg === 'string' ? args.arg.trim() : '';
+      if (!id && /^\d+$/.test(nArg)) {
+        const items = list({ project });
+        const n = parseInt(nArg, 10);
+        if (n >= 1 && n <= items.length) id = items[n - 1].id;
+      }
+      if (!id) {
+        process.stderr.write(`baton ${cmd}: give an explicit target — a number from \`baton list\`, or --id <id>.\n`);
+        process.exitCode = 1;
+        break;
+      }
+      const conv = setHidden(id, hidden);
+      if (!conv) {
+        process.stderr.write(`baton ${cmd}: no conversation with id ${id}.\n`);
+        process.exitCode = 1;
+        break;
+      }
+      process.stdout.write(`Baton: ${hidden ? 'hid' : 'restored'} "${conv.title || conv.id}" (${conv.id}).\n`);
+      break;
+    }
     case 'to-codex': {
       const { pick } = await import('../src/select.mjs');
       const { exportToCodex } = await import('../src/export-codex.mjs');
@@ -183,6 +212,7 @@ async function main() {
           '  baton render  [--project <dir>] [--arg <list|N>] [--id <id>] [--max-tokens N] [--no-redact]',
           '  baton copy    [same options as render]    Render + copy to the OS clipboard (works with ANY tool)',
           '  baton list    [--project <dir>|--all] [--json]',
+          '  baton hide <n>|--id <id>              Hide a conversation from list/pick (unhide to restore)',
           '  baton to-codex [--project <dir>] [--arg N] [--id <id>]   Write a resumable native Codex session',
           '  baton install [--dry-run]             Wire hook + /baton into Claude Code & Codex',
           '  baton uninstall',

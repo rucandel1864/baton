@@ -205,6 +205,7 @@ baton capture [--file <transcript>]     Mirror a transcript (Stop hook uses stdi
 baton render  [--project <dir>] [--arg <list|N>] [--id <id>] [--max-tokens N] [--no-redact]
 baton copy    [same options as render]  Render + copy to the OS clipboard (any tool)
 baton list    [--project <dir>|--all] [--json]
+baton hide <n> | --id <id>              Hide a conversation from list/pick (baton unhide --id <id> restores)
 baton install [--dry-run]
 baton uninstall
 ```

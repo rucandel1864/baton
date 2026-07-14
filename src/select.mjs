@@ -34,8 +34,9 @@ export function refresh(project) {
 
 export function list({ project } = {}) {
   // Pickup husks (sessions that are just Baton mechanics — see isPickupHusk)
-  // are hidden: they'd shadow the very conversation they were loaded from.
-  let idx = readIndex().filter((e) => !e.husk);
+  // and manually hidden conversations are excluded: a husk would shadow the
+  // very conversation it was loaded from.
+  let idx = readIndex().filter((e) => !e.husk && !e.hidden);
   if (project) idx = idx.filter((e) => pathRelated(e.project, project));
   return idx.map((e, i) => ({
     n: i + 1,

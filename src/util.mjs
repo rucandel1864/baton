@@ -47,25 +47,34 @@ export function safeParse(v) {
 export const BATON_MARKER = 'Continuing a prior conversation (via Baton)';
 
 // True when a conversation is nothing but the mechanics of a Baton pickup:
-// the /baton command text, the injected transcript, and the "caught up" ack.
+// the /baton command, the injected transcript, and the "caught up" ack.
 // Without this filter a pickup session immediately becomes the project's
 // "most recent" conversation and the NEXT /baton loads the husk instead of
-// the real conversation it shadowed (a feedback loop). A husk stops being a
-// husk once the user actually continues working in it — then it's the
-// legitimate latest conversation.
+// the real conversation it shadowed (a feedback loop).
+//
+// The test is: does the conversation contain any substantive USER message?
+// Assistant narration ("Loading the prior conversation…", "Caught up…")
+// never counts — some tools chat freely around a single command, and only
+// the user continuing to work proves the session has become the legitimate
+// latest conversation. Some tools store the slash command literally as
+// "/baton" (Cursor) rather than the expanded command text, so that exact
+// form is mechanics too.
 export function isPickupHusk(conv) {
   let echo = 0;
-  let substance = 0;
+  let userSubstance = 0;
   for (const m of conv.messages || []) {
     if (m.role === 'system') continue;
     const isEcho = (m.parts || []).some((p) => {
       const t = p.text != null ? p.text : p.t === 'tool_use' ? JSON.stringify(p.input || '') : '';
-      return t.includes(BATON_MARKER) || t.includes('baton.mjs');
+      return t.includes(BATON_MARKER) || t.includes('baton.mjs') || /^\/baton\b/i.test(t.trim());
     });
-    if (isEcho) echo++;
-    else substance++;
+    if (isEcho) {
+      echo++;
+      continue;
+    }
+    if (m.role === 'user') userSubstance++;
   }
-  return echo > 0 && substance < 3;
+  return echo > 0 && userSubstance === 0;
 }
 
 // Compact one-line preview of a tool-call input for rendering.
