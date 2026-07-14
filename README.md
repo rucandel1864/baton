@@ -36,13 +36,25 @@ recent turns **verbatim** and compacts the oldest turns into a short summary.
 
 ## Install
 
-Requires **Node ≥ 18**. Zero runtime dependencies.
+Requires **Node ≥ 18**. Zero runtime dependencies. One command:
 
 ```bash
-git clone <this-repo> baton
-cd baton
-node install.mjs        # or:  node bin/baton.mjs install
+npx -y github:rucandel1864/baton install
 ```
+
+That's it — no clone needed. Install copies a stable engine into `~/.baton/engine/`
+and wires everything to point at it, so it keeps working even after the npx cache is
+cleaned. Re-run any time to update.
+
+<details>
+<summary>Or from a clone</summary>
+
+```bash
+git clone https://github.com/rucandel1864/baton
+cd baton
+node install.mjs
+```
+</details>
 
 This wires up, idempotently:
 
