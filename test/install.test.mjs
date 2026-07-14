@@ -67,6 +67,25 @@ test('install is idempotent (no duplicate Stop hook)', async () => {
   assert.ok(fs.existsSync(path.join(ccRoot, 'settings.json.baton-bak')));
 });
 
+test('npm "files" whitelist ships every template install.mjs reads', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  for (const needed of ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'install.mjs', 'uninstall.mjs']) {
+    assert.ok(pkg.files.includes(needed), `package.json files must include "${needed}" or npx install breaks`);
+  }
+});
+
+test('re-install from the STAGED engine works (all templates staged)', async () => {
+  const stagedRoot = path.join(process.env.BATON_DIR, 'engine');
+  for (const t of ['commands/baton.md', 'prompts/baton.md', 'codex-skill/SKILL.md', 'opencode-command/baton.md']) {
+    assert.ok(fs.existsSync(path.join(stagedRoot, ...t.split('/'))), `staged engine missing template ${t}`);
+  }
+  // Running install with root = staged engine must not throw and must converge.
+  await install.main({ root: stagedRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, args: {} });
+  const s = readSettings();
+  const batonEntries = s.hooks.Stop.filter((e) => (e.hooks || []).some((h) => h.command.includes('baton.mjs')));
+  assert.equal(batonEntries.length, 1);
+});
+
 test('uninstall removes hook + command + prompt, leaves other settings', async () => {
   await uninstall.main({ roots: [ccRoot], codexPromptsDir, codexSkillsDir, opencodeCommandDir, args: {} });
   const s = readSettings();

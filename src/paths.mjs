@@ -16,18 +16,31 @@ export function codexHome() {
 }
 
 // OpenCode stores conversations in a SQLite DB under its data dir; custom
-// commands live under its config dir.
+// commands live under its config dir. OpenCode uses XDG-style locations on
+// every platform (including Windows/macOS), honoring XDG_* when set.
 export function opencodeDb() {
   if (process.env.OPENCODE_DB) return process.env.OPENCODE_DB;
-  return path.join(home(), '.local', 'share', 'opencode', 'opencode.db');
+  const candidates = [];
+  if (process.env.XDG_DATA_HOME) candidates.push(path.join(process.env.XDG_DATA_HOME, 'opencode', 'opencode.db'));
+  candidates.push(path.join(home(), '.local', 'share', 'opencode', 'opencode.db'));
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {
+      /* unreadable candidate */
+    }
+  }
+  return candidates[candidates.length - 1];
 }
 export function opencodeConfigDir() {
-  return process.env.OPENCODE_CONFIG_DIR || path.join(home(), '.config', 'opencode');
+  if (process.env.OPENCODE_CONFIG_DIR) return process.env.OPENCODE_CONFIG_DIR;
+  if (process.env.XDG_CONFIG_HOME) return path.join(process.env.XDG_CONFIG_HOME, 'opencode');
+  return path.join(home(), '.config', 'opencode');
 }
 
 // Claude Code encodes a project dir by replacing every non-alphanumeric char
-// with '-'. e.g. C:\Users\sneak\OneDrive\Desktop\investing
-//            ->  C--Users-sneak-OneDrive-Desktop-investing
+// with '-'. e.g. C:\Users\alice\Desktop\myproject
+//            ->  C--Users-alice-Desktop-myproject
 // (We derive `project` from the transcript's `cwd` field, not by reversing
 //  this — but keep it correct for any forward lookups.)
 export function sanitizeCwd(cwd) {
@@ -61,20 +74,33 @@ export function pathRelated(a, b) {
 }
 
 // Discover Claude Code config dirs to install into / read from.
-// Looks at CLAUDE_CONFIG_DIR, ~/.claude, ~/.claude-b (dedup, existing only).
+// Looks at $CLAUDE_CONFIG_DIR, ~/.claude, and any ~/.claude-* sibling — people
+// who run multiple accounts isolate them in suffixed config dirs, and Baton's
+// whole point is handing off between those.
+//
+// Trust levels: $CLAUDE_CONFIG_DIR and ~/.claude are accepted on weak evidence
+// (settings.json is enough — a fresh config dir may have nothing else). Scanned
+// ~/.claude-* siblings need STRONG evidence (projects/ or commands/), because
+// other tools also use .claude-<name> dirs for their own data and writing a
+// hook into their settings.json would corrupt them.
 export function discoverCcRoots() {
-  const candidates = [];
-  if (process.env.CLAUDE_CONFIG_DIR) candidates.push(process.env.CLAUDE_CONFIG_DIR);
-  candidates.push(path.join(home(), '.claude'));
-  candidates.push(path.join(home(), '.claude-b'));
+  const candidates = []; // { dir, strong }
+  if (process.env.CLAUDE_CONFIG_DIR) candidates.push({ dir: process.env.CLAUDE_CONFIG_DIR, strong: false });
+  candidates.push({ dir: path.join(home(), '.claude'), strong: false });
+  try {
+    for (const entry of fs.readdirSync(home())) {
+      if (/^\.claude-[A-Za-z0-9_-]+$/.test(entry)) candidates.push({ dir: path.join(home(), entry), strong: true });
+    }
+  } catch {
+    /* home not listable — fall back to the fixed candidates */
+  }
   const roots = [];
-  for (const c of candidates) {
+  for (const { dir: c, strong } of candidates) {
     try {
-      const looksLikeCc =
-        fs.existsSync(path.join(c, 'projects')) ||
-        fs.existsSync(path.join(c, 'settings.json')) ||
-        fs.existsSync(path.join(c, 'commands'));
-      if (fs.existsSync(c) && looksLikeCc) {
+      if (!fs.existsSync(c)) continue;
+      const hasStrong = fs.existsSync(path.join(c, 'projects')) || fs.existsSync(path.join(c, 'commands'));
+      const looksLikeCc = strong ? hasStrong : hasStrong || fs.existsSync(path.join(c, 'settings.json'));
+      if (looksLikeCc) {
         const np = normPath(c);
         if (!roots.some((r) => normPath(r) === np)) roots.push(c);
       }

@@ -38,6 +38,23 @@ function summarize(dropped) {
   return `[Baton compaction] ${dropped.length} earlier message(s) omitted to fit the target model's context window; the most recent turns below are verbatim.${body}`;
 }
 
+// Truncate a single message's text-bearing parts (proportionally) so the whole
+// message fits in `budgetTokens`. Guards against one giant pasted log blowing
+// straight past the compaction budget — compact() always keeps the newest
+// message, so it must never be allowed to be arbitrarily large.
+export function clampMessage(m, budgetTokens) {
+  const cost = messageTokens(m);
+  if (cost <= budgetTokens) return m;
+  const ratio = budgetTokens / cost;
+  const parts = (m.parts || []).map((p) => {
+    if (p.text == null) return p;
+    const keep = Math.max(200, Math.floor(p.text.length * ratio));
+    if (p.text.length <= keep) return p;
+    return { ...p, text: p.text.slice(0, keep) + `\n…[${p.text.length - keep} chars truncated by baton]`, truncated: true };
+  });
+  return { ...m, parts };
+}
+
 // Keep newest messages verbatim until `budgetTokens`, replacing the older
 // prefix with a single synthetic system summary message.
 // Returns { messages, compacted }.
@@ -54,6 +71,14 @@ export function compact(messages, budgetTokens) {
   let used = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
     if (kept.length && used + costs[i] > budgetTokens - reserve) break;
+    if (!kept.length) {
+      // Newest message is always kept, but never allowed to exceed the budget
+      // on its own.
+      const clamped = clampMessage(messages[i], Math.max(1, budgetTokens - reserve));
+      kept.unshift(clamped);
+      used += messageTokens(clamped);
+      continue;
+    }
     kept.unshift(messages[i]);
     used += costs[i];
   }

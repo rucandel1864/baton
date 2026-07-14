@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { discoverCcRoots, codexHome, opencodeConfigDir, batonDir, normPath } from './src/paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const STAGE_ITEMS = ['bin', 'src', 'commands', 'prompts', 'install.mjs', 'uninstall.mjs', 'package.json'];
+const STAGE_ITEMS = ['bin', 'src', 'commands', 'prompts', 'codex-skill', 'opencode-command', 'install.mjs', 'uninstall.mjs', 'package.json'];
 
 function fwd(p) {
   return p.replace(/\\/g, '/');
@@ -121,7 +121,7 @@ function printSummary(s) {
     lines.push('  Claude Code:');
     for (const r of s.ccRoots) lines.push(`    - ${r.root}  (Stop hook ${r.hook}, /baton command written)`);
   } else {
-    lines.push('  Claude Code: no config dirs found (looked for ~/.claude, ~/.claude-b, $CLAUDE_CONFIG_DIR).');
+    lines.push('  Claude Code: no config dirs found (looked for $CLAUDE_CONFIG_DIR, ~/.claude, ~/.claude-*).');
   }
   lines.push(`  Codex skill (desktop app): ${s.codexSkill}`);
   lines.push(`  Codex prompt (CLI/IDE):    ${s.codexPrompt}`);

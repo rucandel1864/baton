@@ -7,8 +7,8 @@ import { redactSecrets } from '../src/redact.mjs';
 
 test('sanitizeCwd matches CC dir encoding', () => {
   assert.equal(
-    sanitizeCwd('C:\\Users\\sneak\\OneDrive\\Desktop\\investing'),
-    'C--Users-sneak-OneDrive-Desktop-investing',
+    sanitizeCwd('C:\\Users\\alice\\Desktop\\myproject'),
+    'C--Users-alice-Desktop-myproject',
   );
 });
 
@@ -38,6 +38,18 @@ test('compact keeps small transcripts untouched', () => {
   const { messages, compacted } = compact(msgs, 1000);
   assert.equal(compacted, false);
   assert.equal(messages.length, 1);
+});
+
+test('compact clamps a single message that alone exceeds the budget', () => {
+  const msgs = [
+    { role: 'user', parts: [{ t: 'text', text: 'small earlier turn' }] },
+    { role: 'user', parts: [{ t: 'text', text: 'giant paste: ' + 'y'.repeat(400000) }] }, // ~100k tokens
+  ];
+  const { messages } = compact(msgs, 2000);
+  const newest = messages[messages.length - 1];
+  assert.match(newest.parts[0].text, /truncated by baton/);
+  const totalChars = messages.reduce((a, m) => a + m.parts.map((p) => p.text || '').join('').length, 0);
+  assert.ok(totalChars < 2000 * 4 * 1.2, `render stays near budget (got ${totalChars} chars)`);
 });
 
 test('compact summarizes oldest and keeps newest verbatim under budget', () => {

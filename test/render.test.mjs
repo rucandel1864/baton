@@ -33,6 +33,22 @@ test('render reproduces the conversation as markdown', () => {
   assert.match(out, /file1/);
 });
 
+test('tool output containing ``` cannot break out of its code fence', () => {
+  upsertConversation({
+    id: 'cc:R3',
+    source: 'claude-code',
+    meta: { project: '/proj/fence', title: 'fences' },
+    messages: [
+      { role: 'assistant', parts: [{ t: 'tool_result', name: '', text: 'before\n```js\nembedded();\n```\nafter', truncated: false }] },
+    ],
+    mode: 'replace',
+  });
+  const out = render({ project: '/proj/fence' });
+  // The wrapping fence must be longer than the embedded ``` run.
+  assert.match(out, /````\nbefore\n```js/);
+  assert.match(out, /```\nafter\n````/);
+});
+
 test('render redacts secrets by default and not when disabled', () => {
   upsertConversation({
     id: 'cc:R2',

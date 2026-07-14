@@ -28,9 +28,17 @@ export function captureFile(transcriptPath, sessionIdHint) {
 
   let id = sessionIdHint ? 'cc:' + sessionIdHint : null;
   let watermark = 0;
+  let rewound = false;
   if (id) {
     const ex = readConversation(id);
     if (ex) watermark = ex.watermark || 0;
+  }
+  if (stat.size < watermark) {
+    // Transcript shrank (rotated/rewritten under the same session id): the old
+    // watermark is meaningless. Re-parse from the start and REPLACE the stored
+    // messages, otherwise capture would silently stall forever.
+    watermark = 0;
+    rewound = true;
   }
   if (id && stat.size <= watermark) return { ok: true, reason: 'no-change', id };
 
@@ -68,7 +76,7 @@ export function captureFile(transcriptPath, sessionIdHint) {
     meta: parsed.meta,
     messages: parsed.messages,
     newOffset: absOffset,
-    mode: 'append',
+    mode: rewound ? 'replace' : 'append',
   });
   return { ok: true, id, added: parsed.messages.length };
 }

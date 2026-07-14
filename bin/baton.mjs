@@ -7,6 +7,12 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
+// Piping output through `head`-like consumers closes stdout early; that's
+// normal CLI life, not an error.
+process.stdout.on('error', (e) => {
+  if (e && e.code === 'EPIPE') process.exit(0);
+});
+
 function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -91,6 +97,37 @@ async function main() {
       process.stdout.write(out);
       break;
     }
+    case 'copy': {
+      // Universal handoff: render + put on the OS clipboard, so ANY tool with a
+      // paste box (other CLIs, web chats) can pick up the conversation.
+      const { render } = await import('../src/render.mjs');
+      const { refresh } = await import('../src/select.mjs');
+      const { copyToClipboard } = await import('../src/clipboard.mjs');
+      const { estimateTokens } = await import('../src/tokens.mjs');
+      const project = resolveProject(args);
+      refresh(project);
+      const arg = typeof args.arg === 'string' ? args.arg.trim() : '';
+      const out = render({
+        project,
+        id: args.id && args.id !== true ? String(args.id) : undefined,
+        index: /^\d+$/.test(arg) ? parseInt(arg, 10) : undefined,
+        maxTokens: args['max-tokens'] ? parseInt(String(args['max-tokens']), 10) : undefined,
+        redact: args['no-redact'] ? false : undefined,
+      });
+      if (/^_Baton: no saved conversation/.test(out)) {
+        process.stdout.write(out);
+        break;
+      }
+      const r = copyToClipboard(out);
+      if (r.ok) {
+        process.stdout.write(`Baton: handoff copied to clipboard (~${estimateTokens(out).toLocaleString()} tokens, via ${r.method}).\nPaste it as the first message of your new session — any tool, any model.\n`);
+      } else {
+        process.stderr.write('Baton: no clipboard tool found (tried the OS default' + (process.platform === 'linux' ? ', wl-copy, xclip, xsel' : '') + ').\n');
+        process.stderr.write('Fallback:  baton render > handoff.md   then paste/attach that file.\n');
+        process.exitCode = 1;
+      }
+      break;
+    }
     case 'list': {
       const { list, refresh } = await import('../src/select.mjs');
       const project = args.all ? undefined : resolveProject(args);
@@ -144,6 +181,7 @@ async function main() {
           'Usage:',
           '  baton capture [--file <transcript>]   Mirror a CC transcript (Stop hook uses stdin)',
           '  baton render  [--project <dir>] [--arg <list|N>] [--id <id>] [--max-tokens N] [--no-redact]',
+          '  baton copy    [same options as render]    Render + copy to the OS clipboard (works with ANY tool)',
           '  baton list    [--project <dir>|--all] [--json]',
           '  baton to-codex [--project <dir>] [--arg N] [--id <id>]   Write a resumable native Codex session',
           '  baton install [--dry-run]             Wire hook + /baton into Claude Code & Codex',

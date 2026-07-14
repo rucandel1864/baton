@@ -19,6 +19,8 @@
     "src",
     "commands",
     "prompts",
+    "codex-skill",
+    "opencode-command",
     "install.mjs",
     "uninstall.mjs"
   ]

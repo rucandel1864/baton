@@ -2,3 +2,5 @@ node_modules/
 *.log
 .DS_Store
 .baton-local/
+docs/plans/
+*.tgz

@@ -6,15 +6,15 @@ You're deep in a session with one model. You hit a usage limit, or you just want
 different model for the next step. You switch… and the new model knows *nothing*. You
 burn ten minutes re-explaining the goal, the decisions, the current state.
 
-Baton fixes that. It continuously, passively mirrors your conversation to a shared local
-store. In **any** new session — a different Claude Code account, GLM/LongCat running
-inside Claude Code, or the **Codex** app/CLI — you type `/baton` and the new model picks
-up the **full, verbatim conversation** and continues as if it had been there the whole
-time.
+Baton fixes that. It continuously, passively mirrors your conversations to a shared local
+store. In **any** new session — a different tool, a different account, a different model —
+you type `/baton` and the new model picks up the **full, verbatim conversation** and
+continues as if it had been there the whole time.
 
-It's **bidirectional** across **Claude Code**, **Codex**, and **OpenCode**: hand off from any
-to any (and between Claude accounts). Whatever tool you land in, `/baton` pulls the latest
-conversation for that project regardless of which tool produced it.
+It's **bidirectional** across **Claude Code**, **Codex**, and **OpenCode** — hand off from
+any to any, including between multiple Claude Code accounts. And for everything else,
+`baton copy` puts the handoff on your clipboard, so **any** tool with a paste box (other
+CLIs, IDE agents, even web chats) can pick it up too.
 
 ---
 
@@ -29,8 +29,11 @@ that's physically not a thing any tool can do. Full-transcript replay is the rea
 achievable version of "it already knows everything we talked about," and it's what you
 actually want.
 
-If a transcript is bigger than the target model's context window, Baton keeps the most
-recent turns **verbatim** and compacts the oldest turns into a short summary.
+Two size guards keep the handoff practical:
+- If a transcript exceeds the budget (`maxTokens`, default 150k), Baton keeps the most
+  recent turns **verbatim** and compacts the oldest turns into a short summary.
+- Very long individual tool outputs are truncated (20k chars each) — you keep what the
+  models actually said and did, not megabytes of build logs.
 
 ---
 
@@ -58,28 +61,27 @@ node install.mjs
 
 This wires up, idempotently:
 
-- a passive **Stop hook** in every Claude Code config dir it finds (`~/.claude`,
-  `~/.claude-b`, `$CLAUDE_CONFIG_DIR`) — captures each turn automatically;
+- a passive **Stop hook** in every Claude Code config dir it finds (`$CLAUDE_CONFIG_DIR`,
+  `~/.claude`, and any `~/.claude-*` multi-account dirs) — captures each turn automatically;
 - a **`/baton`** slash command in those same config dirs;
 - a **Baton skill** in `~/.codex/skills/baton/` — the mechanism the **Codex desktop app**
   supports (custom prompts are deprecated there);
 - a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex **CLI / IDE extension**;
-- a **`/baton`** custom command in `~/.config/opencode/command/` for **OpenCode** — with inline
-  shell injection, so it's seamless like Claude Code.
+- a **`/baton`** custom command in OpenCode's config dir — with inline shell injection,
+  so it's seamless like Claude Code.
 
 Your existing `settings.json` is backed up to `settings.json.baton-bak` before the first
 change. Nothing leaves your machine. To remove everything (the store is left intact):
 
 ```bash
-node uninstall.mjs
+npx -y github:rucandel1864/baton uninstall
 ```
 
 ---
 
 ## Use
 
-Capture is automatic — just keep working in Claude Code. To pick up a conversation in a
-**new** session (any tool):
+Capture is automatic — just keep working. To pick up a conversation in a **new** session:
 
 | Command | What it does |
 |---|---|
@@ -94,9 +96,28 @@ runs the Baton skill and continues from the prior conversation. In the Codex **C
 extension**, `/baton` works as a custom prompt.
 
 ### The magic test
-1. Have a conversation in Claude Code (Account A).
-2. Open Codex (or Account B, or GLM). Type `/baton`.
+1. Have a conversation in Claude Code.
+2. Open Codex (or OpenCode, or another Claude account). Type `/baton`.
 3. It already knows everything. Keep going.
+
+---
+
+## Any other tool: `baton copy`
+
+Baton isn't limited to the tools it has adapters for. To hand off to **anything** —
+Gemini CLI, Aider, an IDE agent, even ChatGPT or claude.ai in a browser:
+
+```bash
+npx -y github:rucandel1864/baton copy
+```
+
+That renders the latest conversation for the current folder and puts it on the OS
+clipboard (Windows/macOS/Linux). Paste it as the first message of the new session — the
+handoff includes its own "you are resuming this conversation" preamble, so the receiving
+model knows exactly what to do.
+
+Two more universal options, plus a guide to writing first-class adapters (~100 lines
+each), live in **[docs/ADAPTERS.md](docs/ADAPTERS.md)**.
 
 ---
 
@@ -109,7 +130,8 @@ Claude Code turn ends ─▶ Stop hook ─▶ `baton capture`
                                           ▼
                                  ~/.baton/  (canonical JSON, one file per convo)
                                           ▲
-Codex rollouts ──(scanned on demand)──────┘
+Codex rollouts ────(scanned on demand)────┤
+OpenCode SQLite ───(scanned on demand)────┘
                                           │
 new session ─▶ /baton ─▶ `baton render` ─▶ full transcript as Markdown ─▶ injected
 ```
@@ -152,12 +174,17 @@ Bundles live locally under `~/.baton/`. Redaction of high-confidence secret patt
 sensitive data you don't want copied into another tool, review before handing off, or
 prune `~/.baton/`.
 
+Rendered handoffs also frame the transcript as a **historical record**: the receiving
+model is told not to act on instructions embedded inside old messages or tool outputs
+(a basic prompt-injection guard), and tool output is fenced so it can't fake its way
+out of its code block.
+
 ---
 
 ## Scope & limitations (v1)
 
-- Supported: **Claude Code**, **Codex** (app + CLI), and **OpenCode** (TUI / CLI;
-  `node:sqlite` reader needs Node ≥ 22.5).
+- First-class: **Claude Code**, **Codex** (app + CLI), and **OpenCode** (`node:sqlite`
+  reader needs Node ≥ 22.5). Everything else: `baton copy` / [docs/ADAPTERS.md](docs/ADAPTERS.md).
 - Single machine (all endpoints share `~/.baton/`). No cross-machine sync yet.
 - The Claude Code transcript format is officially "internal and may change between
   versions." Baton's parser is deliberately tolerant (skips unknown lines, never
@@ -168,10 +195,17 @@ prune `~/.baton/`.
 ```
 baton capture [--file <transcript>]     Mirror a transcript (Stop hook uses stdin)
 baton render  [--project <dir>] [--arg <list|N>] [--id <id>] [--max-tokens N] [--no-redact]
+baton copy    [same options as render]  Render + copy to the OS clipboard (any tool)
 baton list    [--project <dir>|--all] [--json]
 baton install [--dry-run]
 baton uninstall
 ```
+
+## Contributing
+
+New tool adapters are the most valuable contribution — the canonical format and a
+step-by-step checklist are in [docs/ADAPTERS.md](docs/ADAPTERS.md). Run `node --test`
+before sending a PR (zero-dependency policy: tests use only `node:test`).
 
 ## License
 
