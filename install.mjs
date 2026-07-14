@@ -40,16 +40,17 @@ function entryHasBaton(entry) {
   return Array.isArray(entry?.hooks) && entry.hooks.some((h) => typeof h?.command === 'string' && h.command.includes('baton.mjs'));
 }
 
-export async function main({ root = HERE, args = {}, roots, codexPromptsDir, stage = true } = {}) {
+export async function main({ root = HERE, args = {}, roots, codexPromptsDir, codexSkillsDir, stage = true } = {}) {
   const dryRun = !!args['dry-run'];
   const engineRoot = stage && !dryRun ? stageEngine(root) : root;
   const binPath = fwd(path.join(engineRoot, 'bin', 'baton.mjs'));
   const hookCommand = `node "${binPath}" capture`;
   const ccRoots = roots || discoverCcRoots();
-  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, dryRun };
+  const summary = { engineRoot, binPath, ccRoots: [], codexPrompt: null, codexSkill: null, dryRun };
 
   const cmdTemplate = readTemplate(root, path.join('commands', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
   const promptTemplate = readTemplate(root, path.join('prompts', 'baton.md')).replaceAll('__BATON_BIN__', binPath);
+  const skillTemplate = readTemplate(root, path.join('codex-skill', 'SKILL.md')).replaceAll('__BATON_BIN__', binPath);
 
   for (const ccRoot of ccRoots) {
     const settingsPath = path.join(ccRoot, 'settings.json');
@@ -79,6 +80,7 @@ export async function main({ root = HERE, args = {}, roots, codexPromptsDir, sta
     summary.ccRoots.push({ root: ccRoot, hook: wasPresent ? 'updated' : 'added' });
   }
 
+  // Codex custom prompt (works in the Codex CLI / IDE extension).
   const promptsDir = codexPromptsDir || path.join(codexHome(), 'prompts');
   const promptPath = path.join(promptsDir, 'baton.md');
   if (!dryRun) {
@@ -86,6 +88,16 @@ export async function main({ root = HERE, args = {}, roots, codexPromptsDir, sta
     fs.writeFileSync(promptPath, promptTemplate);
   }
   summary.codexPrompt = promptPath;
+
+  // Codex skill (the CURRENT supported mechanism — this is what the Codex
+  // desktop app loads; custom prompts are deprecated there).
+  const skillDir = codexSkillsDir || path.join(codexHome(), 'skills', 'baton');
+  const skillPath = path.join(skillDir, 'SKILL.md');
+  if (!dryRun) {
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(skillPath, skillTemplate);
+  }
+  summary.codexSkill = skillPath;
 
   printSummary(summary);
   return summary;
@@ -101,10 +113,15 @@ function printSummary(s) {
   } else {
     lines.push('  Claude Code: no config dirs found (looked for ~/.claude, ~/.claude-b, $CLAUDE_CONFIG_DIR).');
   }
-  lines.push(`  Codex prompt: ${s.codexPrompt}`);
+  lines.push(`  Codex skill (desktop app): ${s.codexSkill}`);
+  lines.push(`  Codex prompt (CLI/IDE):    ${s.codexPrompt}`);
   lines.push('');
-  lines.push('Capture is automatic in Claude Code. In any new session (CC or Codex) run  /baton  to pick up.');
-  lines.push('(Restart the Codex desktop app once so it loads the new /baton prompt.)');
+  lines.push('Capture is automatic in Claude Code.');
+  lines.push('Pick up in a new session:');
+  lines.push('  • Claude Code:        /baton');
+  lines.push('  • Codex desktop app:  say "load the baton handoff" (or /baton) — uses the skill');
+  lines.push('  • Codex CLI:          /baton');
+  lines.push('(Fully quit + reopen Codex once so it loads the new skill.)');
   process.stdout.write(lines.join('\n') + '\n');
 }
 

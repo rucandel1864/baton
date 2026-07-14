@@ -61,7 +61,9 @@ This wires up, idempotently:
 - a passive **Stop hook** in every Claude Code config dir it finds (`~/.claude`,
   `~/.claude-b`, `$CLAUDE_CONFIG_DIR`) — captures each turn automatically;
 - a **`/baton`** slash command in those same config dirs;
-- a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex CLI **and** app.
+- a **Baton skill** in `~/.codex/skills/baton/` — the mechanism the **Codex desktop app**
+  supports (custom prompts are deprecated there);
+- a **`/baton`** custom prompt in `~/.codex/prompts/` for the Codex **CLI / IDE extension**.
 
 Your existing `settings.json` is backed up to `settings.json.baton-bak` before the first
 change. Nothing leaves your machine. To remove everything (the store is left intact):
@@ -83,8 +85,11 @@ Capture is automatic — just keep working in Claude Code. To pick up a conversa
 | `/baton list` | Show recent conversations (title · time · which tool) to choose from |
 | `/baton 3` | Load conversation **#3** from that list |
 
-In the **Codex** app/CLI, `/baton` is the same custom prompt — it runs the engine and
-continues from the output.
+**In the Codex desktop app**, pickup is a **skill**, not a slash command (Codex deprecated
+custom prompts in the app). Fully quit and reopen Codex once after installing, then in a new
+conversation just say **"load the baton handoff"** (or "continue where we left off") — Codex
+runs the Baton skill and continues from the prior conversation. In the Codex **CLI / IDE
+extension**, `/baton` works as a custom prompt.
 
 ### The magic test
 1. Have a conversation in Claude Code (Account A).

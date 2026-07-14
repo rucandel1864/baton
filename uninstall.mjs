@@ -29,7 +29,7 @@ function stripBatonStop(settings) {
   return changed;
 }
 
-export async function main({ args = {}, roots, codexPromptsDir } = {}) {
+export async function main({ args = {}, roots, codexPromptsDir, codexSkillsDir } = {}) {
   const ccRoots = roots || discoverCcRoots();
   const removed = [];
 
@@ -57,6 +57,14 @@ export async function main({ args = {}, roots, codexPromptsDir } = {}) {
   try {
     fs.unlinkSync(promptPath);
     removed.push(promptPath);
+  } catch {
+    /* not present */
+  }
+
+  const skillDir = codexSkillsDir || path.join(codexHome(), 'skills', 'baton');
+  try {
+    fs.rmSync(skillDir, { recursive: true, force: true });
+    if (!fs.existsSync(skillDir)) removed.push(skillDir);
   } catch {
     /* not present */
   }

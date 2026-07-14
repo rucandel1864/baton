@@ -16,6 +16,7 @@ const uninstall = await import('../uninstall.mjs');
 
 const ccRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cc-'));
 const codexPromptsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cxp-'));
+const codexSkillsDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'baton-cxs-')), 'baton');
 fs.writeFileSync(path.join(ccRoot, 'settings.json'), JSON.stringify({ model: 'fable' }, null, 2));
 
 function readSettings() {
@@ -23,7 +24,7 @@ function readSettings() {
 }
 
 test('install wires Stop hook + /baton command + codex prompt', async () => {
-  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, args: {} });
+  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, args: {} });
   const s = readSettings();
   assert.ok(Array.isArray(s.hooks.Stop));
   const cmds = s.hooks.Stop.flatMap((e) => (e.hooks || []).map((h) => h.command));
@@ -39,6 +40,12 @@ test('install wires Stop hook + /baton command + codex prompt', async () => {
   assert.match(prompt, /render --project/);
   assert.ok(!prompt.includes('__BATON_BIN__'));
 
+  // Codex skill (desktop-app path) written with substituted bin.
+  const skill = fs.readFileSync(path.join(codexSkillsDir, 'SKILL.md'), 'utf8');
+  assert.match(skill, /name: baton/);
+  assert.match(skill, /render --project/);
+  assert.ok(!skill.includes('__BATON_BIN__'));
+
   // Engine staged to a stable location, and the hook points at it.
   const stagedBin = path.join(process.env.BATON_DIR, 'engine', 'bin', 'baton.mjs');
   assert.ok(fs.existsSync(stagedBin), 'engine staged to ~/.baton/engine');
@@ -46,7 +53,7 @@ test('install wires Stop hook + /baton command + codex prompt', async () => {
 });
 
 test('install is idempotent (no duplicate Stop hook)', async () => {
-  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, args: {} });
+  await install.main({ root: repoRoot, roots: [ccRoot], codexPromptsDir, codexSkillsDir, args: {} });
   const s = readSettings();
   const batonEntries = s.hooks.Stop.filter((e) => (e.hooks || []).some((h) => h.command.includes('baton.mjs')));
   assert.equal(batonEntries.length, 1);
@@ -54,11 +61,12 @@ test('install is idempotent (no duplicate Stop hook)', async () => {
 });
 
 test('uninstall removes hook + command + prompt, leaves other settings', async () => {
-  await uninstall.main({ roots: [ccRoot], codexPromptsDir, args: {} });
+  await uninstall.main({ roots: [ccRoot], codexPromptsDir, codexSkillsDir, args: {} });
   const s = readSettings();
   const stop = s.hooks && s.hooks.Stop ? s.hooks.Stop : [];
   assert.ok(!stop.some((e) => (e.hooks || []).some((h) => h.command.includes('baton.mjs'))));
   assert.equal(s.model, 'fable');
   assert.ok(!fs.existsSync(path.join(ccRoot, 'commands', 'baton.md')));
   assert.ok(!fs.existsSync(path.join(codexPromptsDir, 'baton.md')));
+  assert.ok(!fs.existsSync(path.join(codexSkillsDir, 'SKILL.md')));
 });
